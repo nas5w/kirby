@@ -1,0 +1,17 @@
+{
+    "websiteName": "Nick's Blog",
+    "postDirFormat": "YYYY-DD-MM",
+    "postDateFormat": {
+        "locale": "en-US",
+        "dateOptions": {
+            "year": "numeric",
+            "month": "long",
+            "day": "numeric"
+        },
+        "timeOptions": {
+            "hour12": true,
+            "hour": "2-digit",
+            "minute": "2-digit"
+        }
+    }
+}

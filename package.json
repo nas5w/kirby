@@ -1,15 +1,22 @@
 {
-  "name": "kirby",
-  "version": "0.0.1",
-  "description": "Node-based static HTML blog generator",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "kirby",
-    "blog"
-  ],
-  "author": "Nick Scialli",
-  "license": "MIT"
+    "name": "kirby",
+    "version": "0.0.1",
+    "description": "Node-based static HTML blog generator",
+    "main": "index.js",
+    "scripts": {
+        "build": "node build.js && http-server ./public",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "kirby",
+        "blog"
+    ],
+    "author": "Nick Scialli",
+    "license": "MIT",
+    "dependencies": {
+        "handlebars": "^4.0.12",
+        "http-server": "^0.11.1",
+        "marked": "^0.5.2",
+        "yaml-front-matter": "^4.0.0"
+    }
 }
