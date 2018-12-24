@@ -5,77 +5,81 @@ const yamlFront = require('yaml-front-matter');
 
 const config = require('./config.json');
 
-const postDir = './posts';
+const getPostFiles = require('./tasks/getPostFiles');
+const readFile = require('./tasks/readFile');
+const populatePostTemplate = require('./tasks/populatePostTemplate');
+const populateIndexTemplate = require('./tasks/populateIndexTemplate');
+const writeFile = require('./tasks/writeFile');
 
-// Loop through all the files in the temp directory
-fs.readdir(postDir, function(err, files) {
-    if (err) {
-        console.error('Could not list the directory.', err);
-        process.exit(1);
-    }
-    // Retrieve Post Template
-    fs.readFile(`./templates/post.html`, 'utf8', function(err, source) {
-        // Loop through blog post files
-        let blogPosts = [];
-        files.forEach(function(file, index) {
-            fs.readFile(`${postDir}/${file}`, 'utf8', function(err, data) {
-                const contentWithMetadata = yamlFront.loadFront(data);
-                const postContent = marked(contentWithMetadata.__content);
-                const template = handlebars.compile(source);
-                const date = new Date(contentWithMetadata.dateTime);
-                const postDate = date.toLocaleDateString(
-                    config.postDateFormat.locale,
-                    config.postDateFormat.dateOptions
-                );
-                const postTime = date.toLocaleTimeString(
-                    config.postDateFormat.locale,
-                    config.postDateFormat.timeOptions
-                );
-
-                const context = {
-                    postContent: postContent,
-                    websiteName: config.websiteName || 'Kirby Blog',
-                    postTitle: contentWithMetadata.title || '',
-                    postDate: postDate,
-                    postTime: postTime
-                };
-
-                const postUri = `./public/posts/${
-                    contentWithMetadata.permalink
-                }.html`;
-                blogPosts.push({
-                    title: context.postTitle,
-                    link: `./posts/${contentWithMetadata.permalink}.html`,
-                    dateTime: date
-                });
-
-                fs.writeFile(postUri, template(context), function(err) {
-                    if (err) {
-                        return console.log(err);
-                    }
-
-                    console.log(`${contentWithMetadata.permalink} built!`);
-                });
-            });
+getPostFiles(fs, config.postDir)
+    .then(postFiles => {
+        // Get template
+        let promises = [readFile(fs, config.postTemplateLoc)];
+        // Get all posts
+        postFiles.forEach(postFile => {
+            promises.push(readFile(fs, `${config.postDir}/${postFile}`));
         });
-
-        // Retrieve Index Template
-        fs.readFile(`./templates/index.html`, 'utf8', function(err, source) {
-            const template = handlebars.compile(source);
-            const context = {
-                websiteName: config.websiteName || 'Kirby Blog',
-                blogPosts: blogPosts
-            };
-
-            fs.writeFile('./public/index.html', template(context), function(
-                err
-            ) {
-                if (err) {
-                    return console.log(err);
-                }
-
-                console.log(`Index page built!`);
-            });
+        return Promise.all(promises);
+    })
+    .then(promises => {
+        // Get template
+        const template = promises.shift();
+        let convertedPosts = [];
+        // Populate template for each post
+        promises.forEach(post => {
+            convertedPosts.push(
+                populatePostTemplate(
+                    yamlFront,
+                    handlebars,
+                    marked,
+                    template,
+                    post,
+                    config
+                )
+            );
         });
+        return Promise.all(convertedPosts);
+    })
+    .then(posts => {
+        let promises = [];
+        // Get index template
+        promises.push(readFile(fs, config.indexTemplateLoc));
+        posts.forEach(post => {
+            console.log(`Writing post file: ${post.permalink}`);
+            promises.push(
+                writeFile(
+                    fs,
+                    post.title,
+                    post.post,
+                    config.publicDir,
+                    `${config.postOutputPath}/${post.permalink}.html`
+                )
+            );
+        });
+        return Promise.all(promises);
+    })
+    .then(blogPosts => {
+        const indexTemplate = blogPosts.shift();
+        return populateIndexTemplate(
+            handlebars,
+            indexTemplate,
+            blogPosts,
+            config
+        );
+    })
+    .then(index => {
+        console.log('Writing index file...');
+        return writeFile(
+            fs,
+            'Index page',
+            index,
+            config.publicDir,
+            'index.html'
+        );
+    })
+    .then(output => {
+        console.log("Blog built! (>'-')>");
+    })
+    .catch(err => {
+        console.log('There was a problem building the posts.', err);
     });
-});

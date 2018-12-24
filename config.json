@@ -13,5 +13,10 @@
             "hour": "2-digit",
             "minute": "2-digit"
         }
-    }
+    },
+    "postDir": "./posts",
+    "postTemplateLoc": "./templates/post.html",
+    "postOutputPath": "/posts",
+    "publicDir": "./public",
+    "indexTemplateLoc": "./templates/index.html"
 }
